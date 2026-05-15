@@ -28,9 +28,21 @@ class BookingDatabase (context: Context) :
         onCreate(db)
     }
 
-    fun getAll(): List<BookingDomain> {
+    fun getAll(
+        statusFilter: String? = null,
+        orderBy: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): List<BookingDomain> {
         val list = mutableListOf<BookingDomain>()
-        val cursor = readableDatabase.query("bookings", null, null, null, null, null, "id DESC")
+        val selection = if (statusFilter != null && statusFilter != "Всі") "status=?" else null
+        val selectionArgs = if (selection != null) arrayOf(statusFilter) else null
+        val limitStr = if (limit != null) "$offset, $limit" else null
+        
+        val cursor = readableDatabase.query(
+            "bookings", null, selection, selectionArgs, null, null, 
+            orderBy ?: "id DESC", limitStr
+        )
         with(cursor) {
             while (moveToNext()) {
                 list.add(BookingDomain(
@@ -47,6 +59,34 @@ class BookingDatabase (context: Context) :
             close()
         }
         return list
+    }
+
+    fun getTotalCount(statusFilter: String? = null): Int {
+        val selection = if (statusFilter != null && statusFilter != "Всі") "status=?" else null
+        val selectionArgs = if (selection != null) arrayOf(statusFilter) else null
+        val cursor = readableDatabase.query("bookings", arrayOf("COUNT(*)"), selection, selectionArgs, null, null, null)
+        var count = 0
+        if (cursor.moveToFirst()) {
+            count = cursor.getInt(0)
+        }
+        cursor.close()
+        return count
+    }
+
+    fun getTotalAmount(statusFilter: String? = null): Double {
+        var selection = "status != 'Скасовано'"
+        val selectionArgs = if (statusFilter != null && statusFilter != "Всі") {
+            selection += " AND status=?"
+            arrayOf(statusFilter)
+        } else null
+        
+        val cursor = readableDatabase.query("bookings", arrayOf("SUM(totalPrice)"), selection, selectionArgs, null, null, null)
+        var sum = 0.0
+        if (cursor.moveToFirst()) {
+            sum = cursor.getDouble(0)
+        }
+        cursor.close()
+        return sum
     }
 
     fun insert(b: BookingDomain): Long {

@@ -8,8 +8,26 @@ import java.util.Locale
 class BookingDao(private val db: BookingDatabase) {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-    fun getAll(): List<Booking> {
-        return db.getAll().map { toDomain(it) }
+    fun getAll(
+        status: String? = null,
+        sortByDate: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): List<Booking> {
+        val orderBy = when (sortByDate) {
+            "ASC" -> "checkInDate ASC"
+            "DESC" -> "checkInDate DESC"
+            else -> "id DESC"
+        }
+        return db.getAll(status, orderBy, limit, offset).map { toDomain(it) }
+    }
+
+    fun getTotalCount(status: String? = null): Int {
+        return db.getTotalCount(status)
+    }
+
+    fun getTotalAmount(status: String? = null): Double {
+        return db.getTotalAmount(status)
     }
 
     fun insert(booking: Booking): Long {
