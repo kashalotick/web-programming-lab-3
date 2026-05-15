@@ -36,6 +36,12 @@ fun BookingFormScreen(navController: NavController, bookingId: Long) {
     var checkOutDate by remember { mutableStateOf(Date(System.currentTimeMillis() + 86400000)) }
     var totalPrice by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("Очікується") }
+    var hasAttemptedSave by remember { mutableStateOf(false) }
+
+    val isNameError = hasAttemptedSave && guestName.isBlank()
+    val isRoomError = hasAttemptedSave && roomNumber.isBlank()
+    val priceValue = totalPrice.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val isPriceError = hasAttemptedSave && (totalPrice.isBlank() || priceValue <= 0.0)
 
     LaunchedEffect(bookingId) {
         if (bookingId > 0) {
@@ -99,7 +105,13 @@ fun BookingFormScreen(navController: NavController, bookingId: Long) {
                 value = guestName,
                 onValueChange = { if (it.length <= 255) guestName = it },
                 label = { Text("Ім'я гостя (макс 255)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = isNameError,
+                supportingText = {
+                    if (isNameError) {
+                        Text("Ім'я не може бути порожнім")
+                    }
+                }
             )
 
             Text("Кількість гостей", style = MaterialTheme.typography.bodyLarge)
@@ -133,7 +145,13 @@ fun BookingFormScreen(navController: NavController, bookingId: Long) {
                 value = roomNumber,
                 onValueChange = { if (it.length <= 255) roomNumber = it },
                 label = { Text("Номер кімнати (макс 255)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = isRoomError,
+                supportingText = {
+                    if (isRoomError) {
+                        Text("Номер кімнати не може бути порожнім")
+                    }
+                }
             )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -171,8 +189,14 @@ fun BookingFormScreen(navController: NavController, bookingId: Long) {
                     }
                 },
                 label = { Text("Загальна вартість") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+                isError = isPriceError,
+                supportingText = {
+                    if (isPriceError) {
+                        Text(if (totalPrice.isBlank()) "Введіть ціну" else "Ціна не може бути 0")
+                    }
+                }
             )
 
             var expanded by remember { mutableStateOf(false) }
@@ -224,21 +248,28 @@ fun BookingFormScreen(navController: NavController, bookingId: Long) {
 
             Button(
                 onClick = {
-                    val booking = Booking(
-                        id = bookingId,
-                        guestName = guestName,
-                        guestCount = guestCount,
-                        roomNumber = roomNumber,
-                        checkInDate = checkInDate,
-                        checkOutDate = checkOutDate,
-                        totalPrice = totalPrice.replace(',', '.').toDoubleOrNull() ?: 0.0,
-                        status = status
-                    )
-                    if (bookingId == 0L) dao.insert(booking) else dao.update(booking)
-                    navController.popBackStack()
+                    hasAttemptedSave = true
+                    val isValid = guestName.isNotBlank() && 
+                                  roomNumber.isNotBlank() && 
+                                  totalPrice.isNotBlank() && 
+                                  (totalPrice.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0
+                    
+                    if (isValid) {
+                        val booking = Booking(
+                            id = bookingId,
+                            guestName = guestName,
+                            guestCount = guestCount,
+                            roomNumber = roomNumber,
+                            checkInDate = checkInDate,
+                            checkOutDate = checkOutDate,
+                            totalPrice = totalPrice.replace(',', '.').toDoubleOrNull() ?: 0.0,
+                            status = status
+                        )
+                        if (bookingId == 0L) dao.insert(booking) else dao.update(booking)
+                        navController.popBackStack()
+                    }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = guestName.isNotBlank() && roomNumber.isNotBlank()
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Зберегти")
             }
