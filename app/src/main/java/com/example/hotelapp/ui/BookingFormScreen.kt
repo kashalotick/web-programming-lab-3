@@ -18,7 +18,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.hotelapp.data.Booking
-import com.example.hotelapp.data.BookingDao
 import com.example.hotelapp.data.BookingDatabase
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,7 +26,7 @@ import java.util.*
 @Composable
 fun BookingFormScreen(navController: NavController, bookingId: Long) {
     val context = LocalContext.current
-    val dao = remember { BookingDao(BookingDatabase(context)) }
+    val dao = remember { BookingDatabase.getDatabase(context).bookingDao() }
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
 
     var guestName by remember { mutableStateOf("") }

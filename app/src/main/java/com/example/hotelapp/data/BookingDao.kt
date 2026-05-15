@@ -1,88 +1,66 @@
 package com.example.hotelapp.data
 
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import androidx.room.*
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 
-class BookingDao(private val db: BookingDatabase) {
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+@Dao
+interface BookingDao {
+    @RawQuery
+    fun getAllRaw(query: SupportSQLiteQuery): List<Booking>
 
+    @Query("SELECT COUNT(*) FROM bookings WHERE (:status IS NULL OR :status = 'Всі' OR status = :status)")
+    fun getTotalCount(status: String?): Int
+
+    @Query("SELECT SUM(totalPrice) FROM bookings WHERE status != 'Скасовано' AND (:status IS NULL OR :status = 'Всі' OR status = :status)")
+    fun getTotalAmount(status: String?): Double?
+
+    @Insert
+    fun insert(booking: Booking): Long
+
+    @Update
+    fun update(booking: Booking)
+
+    @Query("DELETE FROM bookings WHERE id = :id")
+    fun deleteById(id: Long)
+
+    @Query("SELECT * FROM bookings WHERE id = :id")
+    fun getById(id: Long): Booking?
+
+    // Helper method for dynamic queries (can be used in UI if needed, 
+    // but here we keep it simple for the lab)
     fun getAll(
         status: String? = null,
         sortByDate: String? = null,
         limit: Int? = null,
         offset: Int? = null
     ): List<Booking> {
-        val orderBy = when (sortByDate) {
-            "ASC" -> "checkInDate ASC"
-            "DESC" -> "checkInDate DESC"
-            else -> "id DESC"
+        val queryStr = StringBuilder("SELECT * FROM bookings")
+        val args = mutableListOf<Any>()
+        var hasWhere = false
+
+        if (status != null && status != "Всі") {
+            queryStr.append(" WHERE status = ?")
+            args.add(status)
+            hasWhere = true
         }
-        return db.getAll(status, orderBy, limit, offset).map { toDomain(it) }
-    }
 
-    fun getTotalCount(status: String? = null): Int {
-        return db.getTotalCount(status)
-    }
-
-    fun getTotalAmount(status: String? = null): Double {
-        return db.getTotalAmount(status)
-    }
-
-    fun insert(booking: Booking): Long {
-        return db.insert(toDto(booking))
-    }
-
-    fun update(booking: Booking) {
-        db.update(toDto(booking))
-    }
-
-    fun delete(id: Long) {
-        db.delete(id)
-    }
-
-    fun getById(id: Long): Booking? {
-        val dto = db.getById(id)
-        return dto?.let { toDomain(it) }
-    }
-
-    private fun toDomain(dto: BookingDomain): Booking {
-        return Booking(
-            id = dto.id,
-            guestName = dto.guestName,
-            guestCount = dto.guestCount,
-            roomNumber = dto.roomNumber,
-            checkInDate = parseDate(dto.checkInDate) ?: Date(),
-            checkOutDate = parseDate(dto.checkOutDate) ?: Date(),
-            totalPrice = dto.totalPrice,
-            status = dto.status
-        )
-    }
-
-    private fun toDto(domain: Booking): BookingDomain {
-        return BookingDomain(
-            id = domain.id,
-            guestName = domain.guestName,
-            guestCount = domain.guestCount,
-            roomNumber = domain.roomNumber,
-            checkInDate = formatDate(domain.checkInDate),
-            checkOutDate = formatDate(domain.checkOutDate),
-            totalPrice = domain.totalPrice,
-            status = domain.status
-        )
-    }
-
-    private fun formatDate(date: Date?): String {
-        return if (date == null) "" else dateFormat.format(date)
-    }
-
-    private fun parseDate(dateStr: String?): Date? {
-        if (dateStr.isNullOrEmpty()) return null
-        return try {
-            dateFormat.parse(dateStr)
-        } catch (e: ParseException) {
-            null
+        if (sortByDate != null) {
+            queryStr.append(" ORDER BY checkInDate $sortByDate")
+        } else {
+            queryStr.append(" ORDER BY id DESC")
         }
+
+        if (limit != null) {
+            queryStr.append(" LIMIT ?")
+            args.add(limit)
+            if (offset != null) {
+                queryStr.append(" OFFSET ?")
+                args.add(offset)
+            }
+        }
+
+        val query = SimpleSQLiteQuery(queryStr.toString(), args.toTypedArray())
+        return getAllRaw(query)
     }
 }

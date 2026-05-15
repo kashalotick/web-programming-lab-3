@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.hotelapp.data.Booking
-import com.example.hotelapp.data.BookingDao
 import com.example.hotelapp.data.BookingDatabase
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -32,7 +31,7 @@ enum class SortOrder {
 @Composable
 fun BookingListScreen(navController: NavController) {
     val context = LocalContext.current
-    val dao = remember { BookingDao(BookingDatabase(context)) }
+    val dao = remember { BookingDatabase.getDatabase(context).bookingDao() }
     
     var selectedStatus by remember { mutableStateOf("Всі") }
     var sortOrder by remember { mutableStateOf(SortOrder.NONE) }
@@ -63,7 +62,7 @@ fun BookingListScreen(navController: NavController) {
         
         // Отримуємо статистику (по всьому відфільтрованому набору)
         totalFilteredCount = dao.getTotalCount(selectedStatus)
-        totalAmountByFilter = dao.getTotalAmount(selectedStatus)
+        totalAmountByFilter = dao.getTotalAmount(selectedStatus) ?: 0.0
         
         // Отримуємо тільки поточну сторінку
         displayedBookings = dao.getAll(
@@ -167,10 +166,10 @@ fun BookingListScreen(navController: NavController) {
                             booking = booking,
                             onEdit = { navController.navigate("form/${booking.id}") },
                             onDelete = {
-                                dao.delete(booking.id)
+                                dao.deleteById(booking.id)
                                 // Тригеримо оновлення
                                 totalFilteredCount = dao.getTotalCount(selectedStatus)
-                                totalAmountByFilter = dao.getTotalAmount(selectedStatus)
+                                totalAmountByFilter = dao.getTotalAmount(selectedStatus) ?: 0.0
                                 displayedBookings = dao.getAll(
                                     status = selectedStatus,
                                     sortByDate = if (sortOrder == SortOrder.ASCENDING) "ASC" else if (sortOrder == SortOrder.DESCENDING) "DESC" else null,
