@@ -27,8 +27,6 @@ interface BookingDao {
     @Query("SELECT * FROM bookings WHERE id = :id")
     fun getById(id: Long): Booking?
 
-    // Helper method for dynamic queries (can be used in UI if needed, 
-    // but here we keep it simple for the lab)
     fun getAll(
         status: String? = null,
         sortByDate: String? = null,

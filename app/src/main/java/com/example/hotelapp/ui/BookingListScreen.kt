@@ -36,23 +36,19 @@ fun BookingListScreen(navController: NavController) {
     var selectedStatus by remember { mutableStateOf("Всі") }
     var sortOrder by remember { mutableStateOf(SortOrder.NONE) }
     
-    // Стан пагінації
     var currentPage by remember { mutableIntStateOf(0) }
     val pageSize = 5
 
-    // Стан для списку бронювань та загальної статистики
     var displayedBookings by remember { mutableStateOf(emptyList<Booking>()) }
     var totalFilteredCount by remember { mutableIntStateOf(0) }
     var totalAmountByFilter by remember { mutableStateOf(0.0) }
 
     val listState = rememberLazyListState()
 
-    // Скидання сторінки при зміні фільтрів
     LaunchedEffect(selectedStatus, sortOrder) {
         currentPage = 0
     }
 
-    // Завантаження даних при зміні сторінки, фільтрів або сортування
     LaunchedEffect(selectedStatus, sortOrder, currentPage) {
         val sortParam = when (sortOrder) {
             SortOrder.ASCENDING -> "ASC"
@@ -60,11 +56,9 @@ fun BookingListScreen(navController: NavController) {
             else -> null
         }
         
-        // Отримуємо статистику (по всьому відфільтрованому набору)
         totalFilteredCount = dao.getTotalCount(selectedStatus)
         totalAmountByFilter = dao.getTotalAmount(selectedStatus) ?: 0.0
         
-        // Отримуємо тільки поточну сторінку
         displayedBookings = dao.getAll(
             status = selectedStatus, 
             sortByDate = sortParam,
@@ -89,7 +83,6 @@ fun BookingListScreen(navController: NavController) {
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             
-            // Міні статистика (тепер через прямі SQL запити)
             Card(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -103,7 +96,6 @@ fun BookingListScreen(navController: NavController) {
                 }
             }
 
-            // Фільтри та сортування
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -167,7 +159,6 @@ fun BookingListScreen(navController: NavController) {
                             onEdit = { navController.navigate("form/${booking.id}") },
                             onDelete = {
                                 dao.deleteById(booking.id)
-                                // Тригеримо оновлення
                                 totalFilteredCount = dao.getTotalCount(selectedStatus)
                                 totalAmountByFilter = dao.getTotalAmount(selectedStatus) ?: 0.0
                                 displayedBookings = dao.getAll(
@@ -182,7 +173,6 @@ fun BookingListScreen(navController: NavController) {
                 }
             }
 
-            // Навігація по сторінках
             val totalPages = kotlin.math.ceil(totalFilteredCount.toDouble() / pageSize).toInt()
             if (totalPages > 1) {
                 Row(

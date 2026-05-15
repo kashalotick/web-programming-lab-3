@@ -165,7 +165,6 @@ fun BookingFormScreen(navController: NavController, bookingId: Long) {
             OutlinedTextField(
                 value = totalPrice,
                 onValueChange = { input ->
-                    // Дозволяємо цифри, крапку та кому для зручності (особливо для укр. локалі)
                     val sanitized = input.replace(',', '.')
                     if (sanitized.isEmpty() || sanitized.toDoubleOrNull() != null) {
                         totalPrice = input
